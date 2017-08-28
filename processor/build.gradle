@@ -1,4 +1,31 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.novoda:bintray-release:0.3.4'
+
+    }
+}
+
+apply plugin: 'com.novoda.bintray-release'
+
+repositories {
+    maven {
+        url 'https://dl.bintray.com/devindi/maven/'
+    }
+}
+
 dependencies {
-    compile project(':library')
+    compile 'com.devindi.mapper:library:0.1'
     compile 'com.squareup:javapoet:1.9.0'
+}
+
+publish {
+    groupId = 'com.devindi.mapper'
+    artifactId = 'processor'
+    publishVersion = '0.1.1'
+    desc = 'An annotation processor for generating bean mappers'
+    licences = ['MIT']
+    website = 'https://github.com/devindi/mapper-generator'
 }
