@@ -75,43 +75,19 @@ public class MapperProcessor extends AbstractProcessor {
     }
 
     private MethodSpec generateMappingMethod(ExecutableElement methodElement) {
-        List<? extends VariableElement> parameters = methodElement.getParameters();
-        if (parameters.size() != 1) {
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, "Mapper method should have only 1 parameter. Method will be ignored", methodElement);
-            return null;
-        }
-        String argumentTypeString = parameters.get(0).asType().toString();
+        VariableElement sourceElement = getParameterElement(methodElement);
+        if (sourceElement == null) return null;
 
-        TypeMirror returnType = methodElement.getReturnType();
-        if (returnType.getKind().equals(TypeKind.VOID)) {
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, "Mapper method should return value. Method will be ignored", methodElement);
-            return null;
-        }
+        TypeMirror targetType = getReturnType(methodElement);
+        if (targetType == null) return null;
 
-        String returnTypeString = returnType.toString();
+        String targetTypeName = targetType.toString();
+        String sourceTypeName = sourceElement.asType().toString();
 
-        String methodName = methodElement.getSimpleName().toString();
+        Map<String, ExecutableElement> argumentGetters = getGetters(sourceTypeName);
 
-        //let's map getters to constructor arguments
-        Map<String, ExecutableElement> argumentGetters = new HashMap<>();
-
-        List<? extends Element> argumentEnclosedElements = processingEnv.getElementUtils().getTypeElement(argumentTypeString).getEnclosedElements();
-        List<ExecutableElement> argumentTypeMethods = ElementFilter.methodsIn(argumentEnclosedElements);
-        for (ExecutableElement argumentTypeMethod : argumentTypeMethods) {
-            String argumentMethodName = argumentTypeMethod.getSimpleName().toString();
-            if (argumentMethodName.startsWith("get") && argumentTypeMethod.getParameters().size() == 0) {
-                argumentGetters.put(argumentMethodName.substring(3).toLowerCase(), argumentTypeMethod);
-            }
-        }
-
-        List<? extends Element> returnEnclosedElements = processingEnv.getElementUtils().getTypeElement(returnTypeString).getEnclosedElements();
-        List<ExecutableElement> returnTypeConstructors = ElementFilter.constructorsIn(returnEnclosedElements);
-        if (returnTypeConstructors.size() != 1) {
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, "Mapper target should have only 1 constructor. Method will be ignored", methodElement);
-            return null;
-        }
-        ExecutableElement constructorElement = returnTypeConstructors.get(0);
-
+        ExecutableElement constructorElement = getConstructorElement(targetTypeName);
+        if (constructorElement == null) return null;
         List<? extends VariableElement> constructorParameters = constructorElement.getParameters();
 
         if (constructorParameters.size() != argumentGetters.size()) {
@@ -123,7 +99,7 @@ public class MapperProcessor extends AbstractProcessor {
         StringBuilder statementBuilder = new StringBuilder();
         statementBuilder
                 .append("return new ")
-                .append(returnTypeString)
+                .append(targetTypeName)
                 .append("(");
 
         String separator = "";
@@ -151,5 +127,47 @@ public class MapperProcessor extends AbstractProcessor {
         methodBuilder.addStatement(statementBuilder.toString());
 
         return methodBuilder.build();
+    }
+
+    private VariableElement getParameterElement(ExecutableElement element) {
+        List<? extends VariableElement> parameters = element.getParameters();
+        if (parameters.size() != 1) {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, "Mapper method should have only 1 parameter. Method will be ignored", element);
+            return null;
+        }
+        return parameters.get(0);
+    }
+
+    private TypeMirror getReturnType(ExecutableElement element) {
+        TypeMirror returnType = element.getReturnType();
+        if (returnType.getKind().equals(TypeKind.VOID)) {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, "Mapper method should return value. Method will be ignored", element);
+            return null;
+        }
+        return returnType;
+    }
+
+    private ExecutableElement getConstructorElement(String className) {
+        TypeElement element = processingEnv.getElementUtils().getTypeElement(className);
+        List<? extends Element> enclosedElements = element.getEnclosedElements();
+        List<ExecutableElement> constructors = ElementFilter.constructorsIn(enclosedElements);
+        if (constructors.size() != 1) {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, "Mapper target should have only 1 constructor. Method will be ignored", element);
+            return null;
+        }
+        return constructors.get(0);
+    }
+
+    private Map<String, ExecutableElement> getGetters(String className) {
+        Map<String, ExecutableElement> gettersMap = new HashMap<>();
+        List<? extends Element> enclosedElements = processingEnv.getElementUtils().getTypeElement(className).getEnclosedElements();
+        List<ExecutableElement> methodElements = ElementFilter.methodsIn(enclosedElements);
+        for (ExecutableElement element : methodElements) {
+            String methodName = element.getSimpleName().toString();
+            if (methodName.startsWith("get") && element.getParameters().size() == 0) {
+                gettersMap.put(methodName.substring(3).toLowerCase(), element);
+            }
+        }
+        return gettersMap;
     }
 }

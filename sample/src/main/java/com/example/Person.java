@@ -1,7 +1,5 @@
 package com.example;
 
-import com.devindi.mapper.Mapper;
-
 public class Person {
 
     private final String name;
