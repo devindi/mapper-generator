@@ -61,10 +61,24 @@ public class PersonMapperImpl implements PersonMapper {
 ```
 
 
-## ToDo list
+## Development
+
+### Debugging
+
+#### IDE setup
+
+Create 'Remote' debug configuration for target module ('sample' for this project) 
+
+#### debug run
+
+Build target with debug flag  
+`./gradlew --no-daemon -Dorg.gradle.debug=true :sample:clean :sample:build`  
+Run 'Remote' configuration that you created before.
+
+### ToDo list
 
 * Type converters (String <-> Long, Double <-> Float, custom converters)
-* Collection mapping (List<Source> -> List<Target>)
+* Collection mapping (List\<Source> -> List\<Target>)
 * Recursive mapping 
 
 
