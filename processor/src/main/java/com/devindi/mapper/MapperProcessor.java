@@ -130,6 +130,11 @@ public class MapperProcessor extends AbstractProcessor {
         for (VariableElement constructorParameter : constructorParameters) {
             String parameterName = constructorParameter.getSimpleName().toString().toLowerCase();
             ExecutableElement getter = argumentGetters.get(parameterName);
+            if (!constructorParameter.asType().equals(getter.getReturnType())) {
+                //getter and constructor parameter have different types
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Getter return type and constructor argument type are different", methodElement);
+            }
+
             statementBuilder
                     .append(separator)
                     .append('\n')
