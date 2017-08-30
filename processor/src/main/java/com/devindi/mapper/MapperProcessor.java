@@ -132,6 +132,7 @@ public class MapperProcessor extends AbstractProcessor {
             ExecutableElement getter = argumentGetters.get(parameterName);
             statementBuilder
                     .append(separator)
+                    .append('\n')
                     .append(methodElement.getParameters().get(0).getSimpleName())
                     .append(".")
                     .append(getter.getSimpleName())
@@ -139,7 +140,9 @@ public class MapperProcessor extends AbstractProcessor {
             separator = ",";
         }
 
-        statementBuilder.append(")");
+        statementBuilder
+                .append('\n')
+                .append(")");
         methodBuilder.addStatement(statementBuilder.toString());
 
         return methodBuilder.build();
