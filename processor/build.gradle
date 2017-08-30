@@ -8,6 +8,7 @@ buildscript {
     }
 }
 
+apply plugin: 'java'
 apply plugin: 'com.novoda.bintray-release'
 
 repositories {
@@ -17,7 +18,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.devindi.mapper:library:0.1'
+    compile project(':library')
     compile 'com.squareup:javapoet:1.9.0'
 }
 
