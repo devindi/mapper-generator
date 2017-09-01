@@ -1,4 +1,4 @@
-package com.example;
+package com.example.simple;
 
 public class PersonDto {
 

@@ -1,5 +1,9 @@
 package com.example;
 
+import com.example.simple.Person;
+import com.example.simple.PersonDto;
+import com.example.simple.PersonMapper;
+import com.example.simple.PersonMapperImpl;
 
 public class Main {
 

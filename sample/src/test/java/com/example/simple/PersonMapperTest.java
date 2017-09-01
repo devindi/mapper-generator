@@ -1,8 +1,6 @@
-package com.example;
+package com.example.simple;
 
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 public class PersonMapperTest {
 

@@ -1,4 +1,4 @@
-package com.example;
+package com.example.simple;
 
 import com.devindi.mapper.Mapper;
 
