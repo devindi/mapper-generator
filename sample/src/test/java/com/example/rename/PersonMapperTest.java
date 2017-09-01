@@ -15,4 +15,13 @@ public class PersonMapperTest {
         Assert.assertEquals(p, mapped);
     }
 
+    @Test
+    public void testMultipleMapping() {
+        PersonResponse response = new PersonResponse("User", 42);
+        PersonMapper personMapper = new PersonMapperImpl();
+        Person person = personMapper.toModel(response);
+        Assert.assertEquals("User", person.getFullName());
+        Assert.assertEquals(42, person.getAge());
+    }
+
 }
