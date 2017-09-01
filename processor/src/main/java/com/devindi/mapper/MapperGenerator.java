@@ -87,8 +87,18 @@ public class MapperGenerator {
 
         String separator = "";
         for (VariableElement constructorParameter : constructorParameters) {
-            String parameterName = constructorParameter.getSimpleName().toString().toLowerCase();
-            ExecutableElement getter = argumentGetters.get(parameterName);
+            String sourceFieldName;
+            com.devindi.mapper.Mapping annotation = mapping.method.getAnnotation(com.devindi.mapper.Mapping.class);
+            if (annotation != null && annotation.target().toLowerCase().equals(constructorParameter.getSimpleName().toString().toLowerCase())) {
+                sourceFieldName = annotation.source();
+            } else {
+                sourceFieldName = constructorParameter.getSimpleName().toString().toLowerCase();
+            }
+            ExecutableElement getter = argumentGetters.get(sourceFieldName.toLowerCase());
+            if (getter == null) {
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to find getter at source for target field", constructorParameter);
+                return null;
+            }
             if (!constructorParameter.asType().equals(getter.getReturnType())) {
                 //getter and constructor parameter have different types
                 // TODO: 01.09.17 try to map/convert source field to target field
