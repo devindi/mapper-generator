@@ -13,5 +13,15 @@ public class DriverLicense {
         this.validUntil = validUntil;
     }
 
+    public String getId() {
+        return id;
+    }
 
+    public String getPhotoUrl() {
+        return photoUrl;
+    }
+
+    public Date getValidUntil() {
+        return validUntil;
+    }
 }

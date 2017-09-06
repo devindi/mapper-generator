@@ -108,17 +108,33 @@ public class MapperGenerator {
             if (!constructorParameter.asType().equals(getter.getReturnType())) {
                 //getter and constructor parameter have different types
                 // TODO: 01.09.17 try to map/convert source field to target field
-                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Getter return type and constructor argument type are different", mapping.method);
-            }
-
-            statementBuilder
-                    .append(separator)
-                    .append('\n')
+                Mapping depMapping = findMapping(getter.getReturnType(), constructorParameter.asType());
+                if (depMapping == null) {
+                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Getter return type and constructor argument type are different", mapping.method);
+                } else {
+                    statementBuilder
+                            .append(separator)
+                            .append('\n')
+                            .append("this.")
+                            .append(depMapping.method.getSimpleName())
+                            .append("(")
                     .append(mapping.method.getParameters().get(0).getSimpleName())
-                    .append(".")
-                    .append(getter.getSimpleName())
-                    .append("()");
-            separator = ",";
+                            .append(".")
+                            .append(getter.getSimpleName())
+                            .append("()")
+                    .append(")");
+                    separator = ",";
+                }
+            } else {
+                statementBuilder
+                        .append(separator)
+                        .append('\n')
+                        .append(mapping.method.getParameters().get(0).getSimpleName())
+                        .append(".")
+                        .append(getter.getSimpleName())
+                        .append("()");
+                separator = ",";
+            }
         }
 
         statementBuilder
@@ -149,6 +165,15 @@ public class MapperGenerator {
             }
         }
         return gettersMap;
+    }
+
+    private Mapping findMapping(TypeMirror source, TypeMirror target) {
+        for (Mapping mapping : mappings) {
+            if (mapping.source.equals(source) && mapping.target.equals(target)) {
+                return mapping;
+            }
+        }
+        return null;
     }
 
     private static class Mapping {
