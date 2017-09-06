@@ -87,12 +87,18 @@ public class MapperGenerator {
 
         String separator = "";
         for (VariableElement constructorParameter : constructorParameters) {
-            String sourceFieldName;
+            String sourceFieldName = constructorParameter.getSimpleName().toString().toLowerCase();
             com.devindi.mapper.Mapping annotation = mapping.method.getAnnotation(com.devindi.mapper.Mapping.class);
             if (annotation != null && annotation.target().toLowerCase().equals(constructorParameter.getSimpleName().toString().toLowerCase())) {
                 sourceFieldName = annotation.source();
-            } else {
-                sourceFieldName = constructorParameter.getSimpleName().toString().toLowerCase();
+            }
+            Mappings mappings = mapping.method.getAnnotation(Mappings.class);
+            if (mappings != null) {
+                for (com.devindi.mapper.Mapping fieldMapping : mappings.value()) {
+                    if (fieldMapping != null && fieldMapping.target().toLowerCase().equals(constructorParameter.getSimpleName().toString().toLowerCase())) {
+                        sourceFieldName = fieldMapping.source();
+                    }
+                }
             }
             ExecutableElement getter = argumentGetters.get(sourceFieldName.toLowerCase());
             if (getter == null) {
