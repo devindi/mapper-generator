@@ -2,6 +2,8 @@ package com.devindi.mapper;
 
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 import java.util.ArrayList;
@@ -16,7 +18,6 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.tools.Diagnostic;
@@ -34,12 +35,14 @@ public class MapperGenerator {
 
     private final TypeElement element;
     private final ProcessingEnvironment processingEnv;
-    private List<Mapping> mappings;
+    private List<MappingInfo> mappings;
+    private List<MappingInfo> autoMappings;
 
     private MapperGenerator(TypeElement mapperElement, ProcessingEnvironment processingEnvironment) {
         this.processingEnv = processingEnvironment;
         this.element = mapperElement;
         mappings = new ArrayList<>();
+        autoMappings = new ArrayList<>();
     }
 
     public TypeSpec generate() {
@@ -49,10 +52,16 @@ public class MapperGenerator {
                 .addModifiers(Modifier.PUBLIC)
                 .addSuperinterface(ClassName.get(element));
 
-        for (Mapping mapping : mappings) {
+        for (MappingInfo mapping : mappings) {
             MethodSpec methodSpec = generateMappingMethod(mapping);
             implBuilder.addMethod(methodSpec);
         }
+
+        for (MappingInfo autoMapping : autoMappings) {
+            MethodSpec methodSpec = generateMappingMethod(autoMapping);
+            implBuilder.addMethod(methodSpec);
+        }
+
 
         return implBuilder.build();
     }
@@ -60,46 +69,35 @@ public class MapperGenerator {
     private void collectMappings() {
         for (ExecutableElement method : ElementFilter.methodsIn(element.getEnclosedElements())) {
             try {
-                mappings.add(new Mapping(method));
+                mappings.add(new MappingInfo(method));
             } catch (IllegalArgumentException exc) {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, exc.getMessage(), method);
             }
         }
     }
 
-    private MethodSpec generateMappingMethod(Mapping mapping) {
-        ExecutableElement constructorElement = getConstructorElement(mapping.target.toString());
+    private MethodSpec generateMappingMethod(MappingInfo mapping) {
+        ExecutableElement constructorElement = getConstructorElement(mapping.getTargetType().toString());
         List<? extends VariableElement> constructorParameters = constructorElement.getParameters();
 
-        Map<String, ExecutableElement> argumentGetters = getGetters(mapping.source.toString());
+        Map<String, ExecutableElement> argumentGetters = getGetters(mapping.getSourceType().toString());
 
 
         if (constructorParameters.size() != argumentGetters.size()) {
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.MANDATORY_WARNING, "Target constructor have different arguments count", mapping.method);
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.MANDATORY_WARNING, "Target constructor have different arguments count", mapping.getMethod());
         }
 
-        MethodSpec.Builder methodBuilder = MethodSpec.overriding(mapping.method);
+
+        MethodSpec.Builder methodBuilder = createMethodBuilder(mapping);
         StringBuilder statementBuilder = new StringBuilder();
         statementBuilder
                 .append("return new ")
-                .append(mapping.target.toString())
+                .append(mapping.getTargetType().toString())
                 .append("(");
 
         String separator = "";
         for (VariableElement constructorParameter : constructorParameters) {
-            String sourceFieldName = constructorParameter.getSimpleName().toString().toLowerCase();
-            com.devindi.mapper.Mapping annotation = mapping.method.getAnnotation(com.devindi.mapper.Mapping.class);
-            if (annotation != null && annotation.target().toLowerCase().equals(constructorParameter.getSimpleName().toString().toLowerCase())) {
-                sourceFieldName = annotation.source();
-            }
-            Mappings mappings = mapping.method.getAnnotation(Mappings.class);
-            if (mappings != null) {
-                for (com.devindi.mapper.Mapping fieldMapping : mappings.value()) {
-                    if (fieldMapping != null && fieldMapping.target().toLowerCase().equals(constructorParameter.getSimpleName().toString().toLowerCase())) {
-                        sourceFieldName = fieldMapping.source();
-                    }
-                }
-            }
+            String sourceFieldName = mapping.getSourceFieldName(constructorParameter.getSimpleName().toString().toLowerCase());
             ExecutableElement getter = argumentGetters.get(sourceFieldName.toLowerCase());
             if (getter == null) {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to find getter at source for target field", constructorParameter);
@@ -107,26 +105,39 @@ public class MapperGenerator {
             }
             if (!constructorParameter.asType().equals(getter.getReturnType())) {
                 //getter and constructor parameter have different types
-                // TODO: 01.09.17 try to map/convert source field to target field
-                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Getter return type and constructor argument type are different", mapping.method);
+                MappingInfo depMapping = findMapping(getter.getReturnType(), constructorParameter.asType());
+                if (depMapping == null) {
+                    depMapping = new MappingInfo(getter.getReturnType(), constructorParameter.asType());
+                    autoMappings.add(depMapping);
+                }
+                statementBuilder
+                        .append(separator)
+                        .append('\n')
+                        .append("this.")
+                        .append(depMapping.getMethodName())
+                        .append("(")
+                        .append(mapping.getSourceName())
+                        .append(".")
+                        .append(getter.getSimpleName())
+                        .append("()")
+                        .append(")");
+                separator = ",";
+            } else {
+                statementBuilder
+                        .append(separator)
+                        .append('\n')
+                        .append(mapping.getSourceName())
+                        .append(".")
+                        .append(getter.getSimpleName())
+                        .append("()");
+                separator = ",";
             }
-
-            statementBuilder
-                    .append(separator)
-                    .append('\n')
-                    .append(mapping.method.getParameters().get(0).getSimpleName())
-                    .append(".")
-                    .append(getter.getSimpleName())
-                    .append("()");
-            separator = ",";
         }
 
         statementBuilder
                 .append('\n')
                 .append(")");
         methodBuilder.addStatement(statementBuilder.toString());
-
-
 
         return methodBuilder.build();
     }
@@ -151,24 +162,24 @@ public class MapperGenerator {
         return gettersMap;
     }
 
-    private static class Mapping {
-        private final TypeMirror source;
-        private final TypeMirror target;
-        private final ExecutableElement method;
-
-        public Mapping(ExecutableElement method) {
-            this.method = method;
-            target = method.getReturnType();
-            if (target.getKind().equals(TypeKind.VOID)) {
-                throw new IllegalArgumentException("Mapper method should return value. Method will be ignored");
+    private MappingInfo findMapping(TypeMirror source, TypeMirror target) {
+        for (MappingInfo mapping : mappings) {
+            if (mapping.getSourceType().equals(source) && mapping.getTargetType().equals(target)) {
+                return mapping;
             }
-            List<? extends VariableElement> parameters = method.getParameters();
-            if (parameters.size() != 1) {
-                throw new IllegalArgumentException("Mapper method should have only 1 parameter. Method will be ignored");
-            }
-            source = parameters.get(0).asType();
         }
+        return null;
     }
 
-
+    private MethodSpec.Builder createMethodBuilder(MappingInfo info) {
+        ExecutableElement method = info.getMethod();
+        if (method == null) {
+            MethodSpec.Builder builder = MethodSpec.methodBuilder(info.getMethodName().toString());
+            builder.addModifiers(Modifier.PRIVATE);
+            builder.returns(TypeName.get(info.getTargetType()));
+            builder.addParameter(ParameterSpec.builder(TypeName.get(info.getSourceType()), "source").build());
+            return builder;
+        }
+        return MethodSpec.overriding(method);
+    }
 }
