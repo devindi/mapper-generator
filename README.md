@@ -77,8 +77,11 @@ Run 'Remote' configuration that you created before.
 
 ### ToDo list
 
-* Type converters (String <-> Long, Double <-> Float, custom converters)
-* Collection mapping (List\<Source> -> List\<Target>)
-* Recursive mapping 
+* [ ] Type converters (String <-> Long, Double <-> Float, custom converters)
+* [ ] Collection mapping (List\<Source> -> List\<Target>)
+* [x] Recursive mapping 
+* [ ] NULL values
+* [ ] Default values
+* [ ] Primitives
 
 

@@ -20,7 +20,7 @@ dependencies {
 publish {
     groupId = 'com.devindi.mapper'
     artifactId = 'library'
-    publishVersion = '0.1'
+    publishVersion = '0.2'
     desc = 'An annotation processor for generating bean mappers'
     licences = ['MIT']
     website = 'https://github.com/devindi/mapper-generator'
