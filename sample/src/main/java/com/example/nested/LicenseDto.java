@@ -5,12 +5,12 @@ import java.util.Date;
 public class LicenseDto {
 
     private String id;
-    private String photoUrl;
+    private PhotoDto photoDto;
     private Date validUntil;
 
-    public LicenseDto(String id, String photoUrl, Date validUntil) {
+    public LicenseDto(String id, PhotoDto photo, Date validUntil) {
         this.id = id;
-        this.photoUrl = photoUrl;
+        this.photoDto = photo;
         this.validUntil = validUntil;
     }
 
@@ -18,8 +18,8 @@ public class LicenseDto {
         return id;
     }
 
-    public String getPhotoUrl() {
-        return photoUrl;
+    public PhotoDto getPhoto() {
+        return photoDto;
     }
 
     public Date getValidUntil() {
@@ -30,7 +30,7 @@ public class LicenseDto {
     public String toString() {
         return "LicenseDto{" +
                 "id='" + id + '\'' +
-                ", photoUrl='" + photoUrl + '\'' +
+                ", photo='" + photoDto + '\'' +
                 ", validUntil=" + validUntil +
                 '}';
     }

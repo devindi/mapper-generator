@@ -5,11 +5,13 @@ public class Driver {
     private final String name;
     private final int age;
     private final DriverLicense license;
+    private final Photo photo;
 
-    public Driver(int age, String name, DriverLicense license) {
+    public Driver(int age, String name, DriverLicense license, Photo photo) {
         this.name = name;
         this.age = age;
         this.license = license;
+        this.photo = photo;
     }
 
     public String getName() {
@@ -22,5 +24,9 @@ public class Driver {
 
     public DriverLicense getLicense() {
         return license;
+    }
+
+    public Photo getPhoto() {
+        return photo;
     }
 }
