@@ -77,4 +77,28 @@ public class MappingInfo {
         }
         return defaultName;
     }
+
+    @Override
+    public String toString() {
+        return targetType + " " + mappingName + "(" + sourceType + " " + sourceName + ")";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        MappingInfo that = (MappingInfo) o;
+
+        if (!sourceType.equals(that.sourceType)) return false;
+        return targetType.equals(that.targetType);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = sourceType.hashCode();
+        result = 31 * result + targetType.hashCode();
+        return result;
+    }
 }

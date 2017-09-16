@@ -11,26 +11,28 @@ public class DriverMapperTest {
     @Test
     public void testNestedMapping() {
         Date date = new Date();
-        Driver d = new Driver(25, "John Doe", new DriverLicense("42", null, date));
+        Driver d = new Driver(25, "John Doe", new DriverLicense("42", new Photo("https://google.com", date), date), new Photo("https://google.com", date));
         DriverMapperImpl driverMapper = new DriverMapperImpl();
         DriverDto driverDto = driverMapper.toDto(d);
         assertEquals(25, driverDto.getAge());
         assertEquals("John Doe", driverDto.getName());
         assertEquals("42", driverDto.getLicenseDto().getId());
-        assertNull(driverDto.getLicenseDto().getPhotoUrl());
+        assertEquals(date, driverDto.getLicenseDto().getPhoto().getCreatedAt());
+        assertEquals("https://google.com", driverDto.getLicenseDto().getPhoto().getUrl());
         assertEquals(date, driverDto.getLicenseDto().getValidUntil());
     }
 
     @Test
     public void testAutoMapping() {
         Date date = new Date();
-        Driver d = new Driver(25, "John Doe", new DriverLicense("42", null, date));
+        Driver d = new Driver(25, "John Doe", new DriverLicense("42", new Photo("https://google.com", date), date), new Photo("https://google.com", date));
         AutoDriverMapper driverMapper = new AutoDriverMapperImpl();
         DriverDto driverDto = driverMapper.toDto(d);
         assertEquals(25, driverDto.getAge());
         assertEquals("John Doe", driverDto.getName());
         assertEquals("42", driverDto.getLicenseDto().getId());
-        assertNull(driverDto.getLicenseDto().getPhotoUrl());
+        assertEquals(date, driverDto.getLicenseDto().getPhoto().getCreatedAt());
+        assertEquals("https://google.com", driverDto.getLicenseDto().getPhoto().getUrl());
         assertEquals(date, driverDto.getLicenseDto().getValidUntil());
     }
 }

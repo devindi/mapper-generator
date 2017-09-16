@@ -7,9 +7,12 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
@@ -35,14 +38,11 @@ public class MapperGenerator {
 
     private final TypeElement element;
     private final ProcessingEnvironment processingEnv;
-    private List<MappingInfo> mappings;
-    private List<MappingInfo> autoMappings;
+    private Set<MappingInfo> mappings;
 
     private MapperGenerator(TypeElement mapperElement, ProcessingEnvironment processingEnvironment) {
         this.processingEnv = processingEnvironment;
         this.element = mapperElement;
-        mappings = new ArrayList<>();
-        autoMappings = new ArrayList<>();
     }
 
     public TypeSpec generate() {
@@ -57,16 +57,11 @@ public class MapperGenerator {
             implBuilder.addMethod(methodSpec);
         }
 
-        for (MappingInfo autoMapping : autoMappings) {
-            MethodSpec methodSpec = generateMappingMethod(autoMapping);
-            implBuilder.addMethod(methodSpec);
-        }
-
-
         return implBuilder.build();
     }
 
     private void collectMappings() {
+        mappings = new HashSet<>();
         for (ExecutableElement method : ElementFilter.methodsIn(element.getEnclosedElements())) {
             try {
                 mappings.add(new MappingInfo(method));
@@ -74,6 +69,45 @@ public class MapperGenerator {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, exc.getMessage(), method);
             }
         }
+
+        Set<MappingInfo> lastRow = mappings;
+        Set<MappingInfo> nextRow = new HashSet<>();
+        do {
+            for (MappingInfo mappingInfo : lastRow) {
+                nextRow.addAll(createDependencies(mappingInfo));
+            }
+            mappings.addAll(nextRow);
+            lastRow = nextRow;
+            nextRow = new HashSet<>();
+        } while (!lastRow.isEmpty());
+    }
+
+    private List<MappingInfo> createDependencies(MappingInfo info) {
+        List<MappingInfo> result = new ArrayList<>();
+        ExecutableElement constructorElement = getConstructorElement(info.getTargetType().toString());
+        List<? extends VariableElement> constructorParameters = constructorElement.getParameters();
+
+        Map<String, ExecutableElement> argumentGetters = getGetters(info.getSourceType().toString());
+
+        if (constructorParameters.size() != argumentGetters.size()) {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.MANDATORY_WARNING, "Target constructor have different arguments count", info.getMethod());
+        }
+
+        for (VariableElement parameter : constructorParameters) {
+            String sourceFieldName = info.getSourceFieldName(parameter.getSimpleName().toString().toLowerCase());
+            ExecutableElement getter = argumentGetters.get(sourceFieldName.toLowerCase());
+            if (getter == null) {
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to find getter at source for target field", parameter);
+                return Collections.emptyList();
+            }
+            if (!parameter.asType().equals(getter.getReturnType())) {
+                MappingInfo fieldMapping = findMapping(getter.getReturnType(), parameter.asType());
+                if (fieldMapping == null) {
+                    result.add(new MappingInfo(getter.getReturnType(), parameter.asType()));
+                }
+            }
+        }
+        return result;
     }
 
     private MethodSpec generateMappingMethod(MappingInfo mapping) {
@@ -99,16 +133,12 @@ public class MapperGenerator {
         for (VariableElement constructorParameter : constructorParameters) {
             String sourceFieldName = mapping.getSourceFieldName(constructorParameter.getSimpleName().toString().toLowerCase());
             ExecutableElement getter = argumentGetters.get(sourceFieldName.toLowerCase());
-            if (getter == null) {
-                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to find getter at source for target field", constructorParameter);
-                return null;
-            }
             if (!constructorParameter.asType().equals(getter.getReturnType())) {
                 //getter and constructor parameter have different types
                 MappingInfo depMapping = findMapping(getter.getReturnType(), constructorParameter.asType());
                 if (depMapping == null) {
-                    depMapping = new MappingInfo(getter.getReturnType(), constructorParameter.asType());
-                    autoMappings.add(depMapping);
+                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "ERROR 1. Failed to find generated mapping info", constructorParameter);
+                    return null;
                 }
                 statementBuilder
                         .append(separator)

@@ -5,11 +5,13 @@ public class DriverDto {
     private String name;
     private int age;
     private LicenseDto licenseDto;
+    private PhotoDto photo;
 
-    public DriverDto(String name, int age, LicenseDto licenseDto) {
+    public DriverDto(String name, int age, LicenseDto licenseDto, PhotoDto photo) {
         this.name = name;
         this.age = age;
         this.licenseDto = licenseDto;
+        this.photo = photo;
     }
 
     public String getName() {
@@ -30,6 +32,10 @@ public class DriverDto {
 
     public LicenseDto getLicenseDto() {
         return licenseDto;
+    }
+
+    public PhotoDto getPhoto() {
+        return photo;
     }
 
     public void setLicenseDto(LicenseDto licenseDto) {

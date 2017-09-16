@@ -4,12 +4,12 @@ import java.util.Date;
 
 public class DriverLicense {
     private final String id;
-    private final String photoUrl;
+    private final Photo photo;
     private final Date validUntil;
 
-    public DriverLicense(String id, String photoUrl, Date validUntil) {
+    public DriverLicense(String id, Photo photo, Date validUntil) {
         this.id = id;
-        this.photoUrl = photoUrl;
+        this.photo = photo;
         this.validUntil = validUntil;
     }
 
@@ -17,8 +17,8 @@ public class DriverLicense {
         return id;
     }
 
-    public String getPhotoUrl() {
-        return photoUrl;
+    public Photo getPhoto() {
+        return photo;
     }
 
     public Date getValidUntil() {
