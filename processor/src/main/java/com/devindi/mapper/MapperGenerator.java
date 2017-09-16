@@ -80,8 +80,6 @@ public class MapperGenerator {
             lastRow = nextRow;
             nextRow = new HashSet<>();
         } while (!lastRow.isEmpty());
-
-        System.out.println("mappings = " + mappings);
     }
 
     private List<MappingInfo> createDependencies(MappingInfo info) {
@@ -135,8 +133,6 @@ public class MapperGenerator {
         for (VariableElement constructorParameter : constructorParameters) {
             String sourceFieldName = mapping.getSourceFieldName(constructorParameter.getSimpleName().toString().toLowerCase());
             ExecutableElement getter = argumentGetters.get(sourceFieldName.toLowerCase());
-            System.out.println("constructorParameter = " + constructorParameter);
-            System.out.println("getter = " + getter);
             if (!constructorParameter.asType().equals(getter.getReturnType())) {
                 //getter and constructor parameter have different types
                 MappingInfo depMapping = findMapping(getter.getReturnType(), constructorParameter.asType());
@@ -177,7 +173,6 @@ public class MapperGenerator {
     }
 
     private ExecutableElement getConstructorElement(String className) {
-        System.out.println("finding constructor for = " + className);
         TypeElement element = processingEnv.getElementUtils().getTypeElement(className);
         List<? extends Element> enclosedElements = element.getEnclosedElements();
         List<ExecutableElement> constructors = ElementFilter.constructorsIn(enclosedElements);
