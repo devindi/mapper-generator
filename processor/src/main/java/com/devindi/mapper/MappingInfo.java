@@ -13,8 +13,8 @@ public class MappingInfo {
     private final TypeMirror sourceType;
     private final TypeMirror targetType;
     private final ExecutableElement method;
-    private final Name sourceName;
-    private final Name mappingName;
+    private final CharSequence sourceName;
+    private final CharSequence mappingName;
 
     public MappingInfo(ExecutableElement method) {
         targetType = method.getReturnType();
@@ -31,6 +31,14 @@ public class MappingInfo {
         this.method = method;
     }
 
+    public MappingInfo(TypeMirror source, TypeMirror target) {
+        sourceType = source;
+        targetType = target;
+        this.sourceName = "source";
+        mappingName = "convert";
+        method = null;
+    }
+
     public TypeMirror getSourceType() {
         return sourceType;
     }
@@ -39,15 +47,34 @@ public class MappingInfo {
         return targetType;
     }
 
-    public Name getSourceName() {
-        return sourceName;
+    public ExecutableElement getMethod() {
+        return method;
     }
 
-    public Name getMappingName() {
+    public CharSequence getMethodName() {
         return mappingName;
     }
 
-    public ExecutableElement getMethod() {
-        return method;
+    public CharSequence getSourceName() {
+        return sourceName;
+    }
+
+    public String getSourceFieldName(String defaultName) {
+        if (method == null) {
+            return defaultName;
+        }
+        com.devindi.mapper.Mapping annotation = method.getAnnotation(com.devindi.mapper.Mapping.class);
+        if (annotation != null && annotation.target().toLowerCase().equals(defaultName)) {
+            return annotation.source();
+        }
+        Mappings mappings = method.getAnnotation(Mappings.class);
+        if (mappings != null) {
+            for (com.devindi.mapper.Mapping fieldMapping : mappings.value()) {
+                if (fieldMapping != null && fieldMapping.target().toLowerCase().equals(defaultName)) {
+                    return fieldMapping.source();
+                }
+            }
+        }
+        return defaultName;
     }
 }

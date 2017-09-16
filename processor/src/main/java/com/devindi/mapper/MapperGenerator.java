@@ -2,6 +2,8 @@ package com.devindi.mapper;
 
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 import java.util.ArrayList;
@@ -34,11 +36,13 @@ public class MapperGenerator {
     private final TypeElement element;
     private final ProcessingEnvironment processingEnv;
     private List<MappingInfo> mappings;
+    private List<MappingInfo> autoMappings;
 
     private MapperGenerator(TypeElement mapperElement, ProcessingEnvironment processingEnvironment) {
         this.processingEnv = processingEnvironment;
         this.element = mapperElement;
         mappings = new ArrayList<>();
+        autoMappings = new ArrayList<>();
     }
 
     public TypeSpec generate() {
@@ -52,6 +56,12 @@ public class MapperGenerator {
             MethodSpec methodSpec = generateMappingMethod(mapping);
             implBuilder.addMethod(methodSpec);
         }
+
+        for (MappingInfo autoMapping : autoMappings) {
+            MethodSpec methodSpec = generateMappingMethod(autoMapping);
+            implBuilder.addMethod(methodSpec);
+        }
+
 
         return implBuilder.build();
     }
@@ -77,7 +87,8 @@ public class MapperGenerator {
             processingEnv.getMessager().printMessage(Diagnostic.Kind.MANDATORY_WARNING, "Target constructor have different arguments count", mapping.getMethod());
         }
 
-        MethodSpec.Builder methodBuilder = MethodSpec.overriding(mapping.getMethod());
+
+        MethodSpec.Builder methodBuilder = createMethodBuilder(mapping);
         StringBuilder statementBuilder = new StringBuilder();
         statementBuilder
                 .append("return new ")
@@ -86,19 +97,7 @@ public class MapperGenerator {
 
         String separator = "";
         for (VariableElement constructorParameter : constructorParameters) {
-            String sourceFieldName = constructorParameter.getSimpleName().toString().toLowerCase();
-            com.devindi.mapper.Mapping annotation = mapping.getMethod().getAnnotation(com.devindi.mapper.Mapping.class);
-            if (annotation != null && annotation.target().toLowerCase().equals(constructorParameter.getSimpleName().toString().toLowerCase())) {
-                sourceFieldName = annotation.source();
-            }
-            Mappings mappings = mapping.getMethod().getAnnotation(Mappings.class);
-            if (mappings != null) {
-                for (com.devindi.mapper.Mapping fieldMapping : mappings.value()) {
-                    if (fieldMapping != null && fieldMapping.target().toLowerCase().equals(constructorParameter.getSimpleName().toString().toLowerCase())) {
-                        sourceFieldName = fieldMapping.source();
-                    }
-                }
-            }
+            String sourceFieldName = mapping.getSourceFieldName(constructorParameter.getSimpleName().toString().toLowerCase());
             ExecutableElement getter = argumentGetters.get(sourceFieldName.toLowerCase());
             if (getter == null) {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to find getter at source for target field", constructorParameter);
@@ -108,27 +107,26 @@ public class MapperGenerator {
                 //getter and constructor parameter have different types
                 MappingInfo depMapping = findMapping(getter.getReturnType(), constructorParameter.asType());
                 if (depMapping == null) {
-                    // TODO: 06.09.17 generate method
-                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Getter return type and constructor argument type are different", mapping.getMethod());
-                } else {
-                    statementBuilder
-                            .append(separator)
-                            .append('\n')
-                            .append("this.")
-                            .append(depMapping.getMethod().getSimpleName())
-                            .append("(")
-                    .append(mapping.getMethod().getParameters().get(0).getSimpleName())
-                            .append(".")
-                            .append(getter.getSimpleName())
-                            .append("()")
-                    .append(")");
-                    separator = ",";
+                    depMapping = new MappingInfo(getter.getReturnType(), constructorParameter.asType());
+                    autoMappings.add(depMapping);
                 }
+                statementBuilder
+                        .append(separator)
+                        .append('\n')
+                        .append("this.")
+                        .append(depMapping.getMethodName())
+                        .append("(")
+                        .append(mapping.getSourceName())
+                        .append(".")
+                        .append(getter.getSimpleName())
+                        .append("()")
+                        .append(")");
+                separator = ",";
             } else {
                 statementBuilder
                         .append(separator)
                         .append('\n')
-                        .append(mapping.getMethod().getParameters().get(0).getSimpleName())
+                        .append(mapping.getSourceName())
                         .append(".")
                         .append(getter.getSimpleName())
                         .append("()");
@@ -140,8 +138,6 @@ public class MapperGenerator {
                 .append('\n')
                 .append(")");
         methodBuilder.addStatement(statementBuilder.toString());
-
-
 
         return methodBuilder.build();
     }
@@ -175,7 +171,15 @@ public class MapperGenerator {
         return null;
     }
 
-    private MappingInfo generateMapping(TypeMirror source, TypeMirror target) {
-        return null;
+    private MethodSpec.Builder createMethodBuilder(MappingInfo info) {
+        ExecutableElement method = info.getMethod();
+        if (method == null) {
+            MethodSpec.Builder builder = MethodSpec.methodBuilder(info.getMethodName().toString());
+            builder.addModifiers(Modifier.PRIVATE);
+            builder.returns(TypeName.get(info.getTargetType()));
+            builder.addParameter(ParameterSpec.builder(TypeName.get(info.getSourceType()), "source").build());
+            return builder;
+        }
+        return MethodSpec.overriding(method);
     }
 }
