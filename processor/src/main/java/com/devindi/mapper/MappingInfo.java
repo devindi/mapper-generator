@@ -101,4 +101,13 @@ public class MappingInfo {
         result = 31 * result + targetType.hashCode();
         return result;
     }
+
+    String getDefaultValueExpression() {
+        if (method == null) return "null";
+        DefaultValue annotation = method.getAnnotation(DefaultValue.class);
+        if (annotation != null) {
+            return annotation.value();
+        }
+        return "null";
+    }
 }

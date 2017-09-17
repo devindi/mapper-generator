@@ -121,10 +121,14 @@ public class MapperGenerator {
             processingEnv.getMessager().printMessage(Diagnostic.Kind.MANDATORY_WARNING, "Target constructor have different arguments count", mapping.getMethod());
         }
 
-
         MethodSpec.Builder methodBuilder = createMethodBuilder(mapping);
         StringBuilder statementBuilder = new StringBuilder();
         statementBuilder
+                .append("if (")
+                .append(mapping.getSourceName())
+                .append(" == null) return ")
+                .append(mapping.getDefaultValueExpression())
+                .append(";\n")
                 .append("return new ")
                 .append(mapping.getTargetType().toString())
                 .append("(");
