@@ -13,4 +13,5 @@ import java.lang.annotation.Target;
 public @interface Mapping {
     String source() default "";
     String target() default "";
+    String defaultValue() default "null";
 }

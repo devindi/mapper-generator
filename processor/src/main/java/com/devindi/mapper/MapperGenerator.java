@@ -110,6 +110,7 @@ public class MapperGenerator {
         return result;
     }
 
+    @Deprecated
     private MethodSpec generateMappingMethod(MappingInfo mapping) {
         ExecutableElement constructorElement = getConstructorElement(mapping.getTargetType().toString());
         List<? extends VariableElement> constructorParameters = constructorElement.getParameters();
